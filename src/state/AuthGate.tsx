@@ -67,7 +67,9 @@ export default function AuthGate({ children }: { children: React.ReactNode }) {
       <Centered>
         <div className="max-w-sm text-center">
           <p className="text-sm text-red-300">Can't reach the Hermes server.</p>
-          <p className="mt-1 text-xs wrap-break-word text-white/40">{bootError}</p>
+          <p className="mt-1 text-xs wrap-break-word text-white/40">
+            {bootError}
+          </p>
           <button
             onClick={() => void check()}
             className="mt-4 rounded-lg border border-white/15 px-4 py-2 text-sm hover:bg-white/10"
@@ -160,7 +162,7 @@ function LoginForm({
         <button
           type="submit"
           disabled={!username || !password || submitting}
-          className="flex w-full items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 py-2.5 text-sm font-medium text-white hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
+          className="flex min-h-11 w-full items-center justify-center gap-2 rounded-lg bg-sky-500 px-4 text-sm font-medium text-white hover:bg-sky-400 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? (
             <Loader2 className="h-4 w-4 animate-spin" />

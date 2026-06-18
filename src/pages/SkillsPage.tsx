@@ -1,5 +1,13 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { Package, Wrench, Plus, Loader2, X, Search } from "lucide-react";
+import {
+  Package,
+  Wrench,
+  Plus,
+  Loader2,
+  X,
+  Search,
+  SlidersHorizontal,
+} from "lucide-react";
 import { api, type Skill, type Toolset } from "@/lib/api";
 
 function titleCase(s: string): string {
@@ -19,6 +27,12 @@ export default function SkillsPage() {
   const [view, setView] = useState<string>("all"); // "all" | "toolsets" | <category>
   const [query, setQuery] = useState("");
   const [newOpen, setNewOpen] = useState(false);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  // Selecting a filter also closes the mobile drawer.
+  const selectView = (v: string) => {
+    setView(v);
+    setFiltersOpen(false);
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -113,8 +127,24 @@ export default function SkillsPage() {
 
   return (
     <div className="flex h-full">
-      {/* Filters */}
-      <div className="flex w-60 shrink-0 flex-col overflow-y-auto border-r border-white/10 bg-black/20 p-3">
+      {/* Backdrop (mobile, when the filter drawer is open) */}
+      {filtersOpen && (
+        <button
+          aria-label="Close filters"
+          onClick={() => setFiltersOpen(false)}
+          className="fixed inset-0 z-30 bg-black/60 lg:hidden"
+        />
+      )}
+
+      {/* Filters — drawer below lg, static rail on desktop */}
+      <div
+        className={[
+          "z-40 flex w-72 max-w-[85vw] flex-col overflow-y-auto border-r border-white/10 bg-[#0d1014] p-3",
+          "fixed inset-y-0 left-0 transition-transform duration-200 ease-out",
+          "lg:static lg:z-auto lg:w-60 lg:max-w-none lg:translate-x-0 lg:bg-black/20",
+          filtersOpen ? "translate-x-0" : "-translate-x-full",
+        ].join(" ")}
+      >
         <div className="mb-2 px-2 text-xs font-semibold tracking-wide text-white/40 uppercase">
           Filters
         </div>
@@ -123,14 +153,14 @@ export default function SkillsPage() {
           label="All"
           count={skills.length}
           active={view === "all"}
-          onClick={() => setView("all")}
+          onClick={() => selectView("all")}
         />
         <FilterRow
           icon={Wrench}
           label="Toolsets"
           count={toolsets.length}
           active={view === "toolsets"}
-          onClick={() => setView("toolsets")}
+          onClick={() => selectView("toolsets")}
         />
         <div className="mt-4 mb-1 px-2 text-xs font-semibold tracking-wide text-white/40 uppercase">
           Categories
@@ -138,29 +168,35 @@ export default function SkillsPage() {
         {categories.map(([cat, n]) => (
           <button
             key={cat}
-            onClick={() => setView(cat)}
+            onClick={() => selectView(cat)}
             className={[
-              "flex items-center gap-2 rounded-lg px-2 py-1.5 text-left text-sm",
+              "flex min-h-10 items-center gap-2 rounded-lg px-2 text-left text-sm",
               view === cat
                 ? "bg-white/10 text-white"
-                : "text-white/55 hover:bg-white/5 hover:text-white",
+                : "text-white/60 hover:bg-white/5 hover:text-white",
             ].join(" ")}
           >
             <span className="min-w-0 flex-1 truncate">{titleCase(cat)}</span>
-            <span className="text-xs text-white/35">{n}</span>
+            <span className="text-xs text-white/40">{n}</span>
           </button>
         ))}
       </div>
 
       {/* Main */}
       <div className="flex min-w-0 flex-1 flex-col">
-        <div className="flex items-center gap-3 border-b border-white/10 px-6 py-4">
+        <div className="flex flex-wrap items-center gap-x-3 gap-y-2 border-b border-white/10 px-4 py-3 sm:px-6 sm:py-4">
+          <button
+            onClick={() => setFiltersOpen(true)}
+            className="-ml-1 inline-flex items-center gap-2 rounded-lg border border-white/15 px-3 py-2 text-sm text-white/70 hover:bg-white/10 lg:hidden"
+          >
+            <SlidersHorizontal className="h-4 w-4" /> Filters
+          </button>
           {showToolsets ? (
-            <Wrench className="h-5 w-5 text-white/50" />
+            <Wrench className="hidden h-5 w-5 text-white/50 lg:block" />
           ) : (
-            <Package className="h-5 w-5 text-white/50" />
+            <Package className="hidden h-5 w-5 text-white/50 lg:block" />
           )}
-          <h1 className="text-xl font-semibold tracking-tight">
+          <h1 className="text-lg font-semibold tracking-tight sm:text-xl">
             {headerLabel}
           </h1>
           <span className="rounded-md bg-white/5 px-2 py-0.5 text-xs text-white/45">
@@ -168,19 +204,21 @@ export default function SkillsPage() {
           </span>
           <div className="ml-auto flex items-center gap-2">
             <div className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5">
-              <Search className="h-3.5 w-3.5 text-white/40" />
+              <Search className="h-4 w-4 text-white/40" />
               <input
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
                 placeholder="Filter…"
-                className="w-40 bg-transparent text-sm text-white placeholder:text-white/35 focus:outline-none"
+                className="w-28 bg-transparent text-sm text-white placeholder:text-white/35 focus:outline-none sm:w-40"
               />
             </div>
             <button
               onClick={() => setNewOpen(true)}
               className="inline-flex items-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400"
             >
-              <Plus className="h-4 w-4" /> New skill
+              <Plus className="h-4 w-4" />
+              <span className="hidden sm:inline">New skill</span>
+              <span className="sm:hidden">New</span>
             </button>
           </div>
         </div>
@@ -191,7 +229,7 @@ export default function SkillsPage() {
           </div>
         )}
 
-        <div className="min-h-0 flex-1 overflow-y-auto px-6 py-4">
+        <div className="min-h-0 flex-1 overflow-y-auto px-4 py-4 sm:px-6">
           {loading ? (
             <div className="flex items-center gap-2 text-sm text-white/40">
               <Loader2 className="h-4 w-4 animate-spin" /> Loading…

@@ -34,12 +34,53 @@ body {
     Helvetica,
     Arial,
     sans-serif;
+  -webkit-text-size-adjust: 100%;
+}
+
+/* Form controls render at >=16px so iOS Safari never zoom-snaps on focus, and
+   so labels/inputs stay legible for non-technical users. (Visual size can be
+   overridden per-control with Tailwind text-* where density is warranted.) */
+input,
+textarea,
+select {
+  font-size: max(16px, 1em);
+}
+
+/* Touch ergonomics: on coarse pointers (phones/tablets) every interactive
+   control gets a comfortable minimum hit area. Inline links and elements that
+   opt out via .no-tap-min are exempt. */
+@media (pointer: coarse) {
+  button:not(.no-tap-min),
+  [role="button"]:not(.no-tap-min),
+  select,
+  summary,
+  a[role="tab"] {
+    min-height: 44px;
+  }
+  /* Square icon-only buttons need width too, or they stay a thin sliver that's
+     hard to tap. Opt in with .tap-square; stays compact on fine pointers. */
+  .tap-square {
+    min-width: 44px;
+    min-height: 44px;
+  }
+}
+
+/* Honor reduced-motion: collapse non-essential transitions/animations. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* Lightweight markdown styling for chat messages (no typography plugin). */
 .md {
-  font-size: 0.9rem;
-  line-height: 1.6;
+  font-size: 1rem;
+  line-height: 1.65;
   word-break: break-word;
 }
 .md > :first-child {

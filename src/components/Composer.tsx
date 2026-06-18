@@ -1,11 +1,5 @@
 import { useRef, useState } from "react";
-import {
-  Paperclip,
-  SendHorizontal,
-  Square,
-  BookOpen,
-  Slash,
-} from "lucide-react";
+import { SendHorizontal, Square, BookOpen, Slash } from "lucide-react";
 import type { Skill } from "@/lib/api";
 
 /** Curated native slash commands surfaced in the "/" palette. Any other
@@ -145,14 +139,6 @@ export default function Composer({
       <div className="mx-auto flex w-full max-w-3xl items-center gap-2 rounded-2xl border border-white/15 bg-white/5 px-3 py-2">
         <button
           type="button"
-          disabled
-          title="File uploads coming soon"
-          className="cursor-not-allowed text-white/30"
-        >
-          <Paperclip className="h-5 w-5" />
-        </button>
-        <button
-          type="button"
           onClick={() => setSkillsOpen((v) => !v)}
           title="Insert a skill"
           className={
@@ -165,7 +151,7 @@ export default function Composer({
           ref={taRef}
           rows={1}
           value={text}
-          placeholder="Send a message, or type / for commands…"
+          placeholder="Send a message…"
           onChange={(e) => {
             setText(e.target.value);
             autosize(e.target);

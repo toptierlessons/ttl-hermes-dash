@@ -10,6 +10,7 @@ import {
   Trash2,
   ChevronDown,
   ChevronRight,
+  ChevronLeft,
 } from "lucide-react";
 import { useSessions, type ChatSession } from "@/state/SessionsProvider";
 import { api, type SessionSearchResult, type Skill } from "@/lib/api";
@@ -165,23 +166,41 @@ export default function ChatPage() {
     };
   }, [q]);
 
+  // Mobile is master/detail: show the list OR the thread (not both). Desktop
+  // (lg+) shows both side by side and ignores this.
+  const [mobileView, setMobileView] = useState<"list" | "thread">("list");
+  const openOnMobile = (id: string) => {
+    setMobileView("thread");
+    void openSession(id);
+  };
+
   function openResult(r: SessionSearchResult) {
+    setMobileView("thread");
     void openSession(r.session_id, stripMarkers(r.snippet));
     setQuery("");
   }
 
   return (
     <div className="flex h-full">
-      {/* Session rail */}
-      <div className="flex w-64 flex-col border-r border-white/10 bg-black/20">
-        <div className="flex items-center justify-between p-3">
-          <span className="text-sm font-medium text-white/70">Chats</span>
+      {/* Session rail — full-width "list" view on mobile, fixed rail on desktop */}
+      <div
+        className={[
+          "min-w-0 flex-col border-r border-white/10 bg-black/20",
+          "w-full lg:flex lg:w-72 lg:shrink-0",
+          mobileView === "list" ? "flex" : "hidden",
+        ].join(" ")}
+      >
+        <div className="flex items-center justify-between px-3 pt-3 pb-2">
+          <span className="text-base font-semibold text-white/80">Chats</span>
           <ConnBadge state={connection} />
         </div>
         <button
-          onClick={() => void createSession()}
+          onClick={() => {
+            setMobileView("thread");
+            void createSession();
+          }}
           disabled={connection !== "open"}
-          className="mx-3 mb-2 flex items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-40"
+          className="mx-3 mb-2 flex min-h-11 items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-40"
         >
           <Plus className="h-4 w-4" /> New chat
         </button>
@@ -242,7 +261,7 @@ export default function ChatPage() {
                           key={s.id}
                           session={s}
                           active={s.id === activeId}
-                          onSelect={() => void openSession(s.id)}
+                          onSelect={() => openOnMobile(s.id)}
                         />
                       ))}
                   </div>
@@ -264,18 +283,30 @@ export default function ChatPage() {
         </div>
       </div>
 
-      {/* Active thread */}
-      <div className="flex min-w-0 flex-1 flex-col">
+      {/* Active thread — hidden on mobile while the list is showing */}
+      <div
+        className={[
+          "min-w-0 flex-1 flex-col lg:flex",
+          mobileView === "thread" ? "flex" : "hidden",
+        ].join(" ")}
+      >
         {active ? (
           <>
-            <header className="flex items-center gap-3 border-b border-white/10 px-5 py-3">
-              <MessageSquare className="h-4 w-4 shrink-0 text-white/40" />
-              <span className="truncate text-sm font-medium">
+            <header className="flex items-center gap-2 border-b border-white/10 px-3 py-2.5 sm:px-5">
+              <button
+                onClick={() => setMobileView("list")}
+                aria-label="Back to chats"
+                className="-ml-1 grid h-10 w-10 shrink-0 place-items-center rounded-lg text-white/60 hover:bg-white/10 hover:text-white lg:hidden"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+              <MessageSquare className="hidden h-4 w-4 shrink-0 text-white/40 lg:block" />
+              <span className="min-w-0 flex-1 truncate text-sm font-medium">
                 {active.title}
               </span>
               <ActiveBadge active={active.active} />
               {active.model && (
-                <span className="ml-auto rounded-md bg-white/5 px-2 py-0.5 font-mono text-xs text-white/45">
+                <span className="hidden max-w-[14rem] shrink-0 truncate rounded-md bg-white/5 px-2 py-0.5 font-mono text-xs text-white/45 sm:inline-block">
                   {active.model}
                 </span>
               )}
@@ -285,10 +316,7 @@ export default function ChatPage() {
                   setPendingDelete(active);
                 }}
                 title="Delete conversation"
-                className={[
-                  "shrink-0 rounded-md p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-300",
-                  active.model ? "" : "ml-auto",
-                ].join(" ")}
+                className="shrink-0 rounded-md p-1.5 text-white/40 hover:bg-red-500/10 hover:text-red-300"
               >
                 <Trash2 className="h-4 w-4" />
               </button>
@@ -341,14 +369,22 @@ export default function ChatPage() {
             />
           </>
         ) : (
-          <div className="grid flex-1 place-items-center px-6 text-center text-sm text-white/40">
-            {connection === "error"
-              ? "Can't reach the agent. Check the Health page."
-              : sessions.length > 0
-                ? "Select a chat on the left, or start a new one."
-                : connection === "open"
-                  ? "Start a new chat to begin."
-                  : "Connecting…"}
+          <div className="flex flex-1 flex-col items-center justify-center gap-4 px-6 text-center text-sm text-white/45">
+            <p>
+              {connection === "error"
+                ? "Can't reach the agent. Check the Health page."
+                : sessions.length > 0
+                  ? "Select a chat, or start a new one."
+                  : connection === "open"
+                    ? "Start a new chat to begin."
+                    : "Connecting…"}
+            </p>
+            <button
+              onClick={() => setMobileView("list")}
+              className="rounded-lg border border-white/15 px-4 py-2.5 text-sm hover:bg-white/10 lg:hidden"
+            >
+              View chats
+            </button>
           </div>
         )}
       </div>

@@ -103,10 +103,10 @@ export default function CronPage() {
   };
 
   return (
-    <div className="mx-auto max-w-3xl p-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-3xl p-4 sm:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
             Scheduled Tasks
           </h1>
           <p className="mt-1 text-sm text-white/50">

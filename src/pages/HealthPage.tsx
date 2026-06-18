@@ -108,10 +108,10 @@ export default function HealthPage() {
     cron.state === "checking";
 
   return (
-    <div className="mx-auto max-w-2xl p-8">
-      <div className="mb-6 flex items-center justify-between">
+    <div className="mx-auto max-w-2xl p-4 sm:p-8">
+      <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl font-semibold tracking-tight">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
             Connection check
           </h1>
           <p className="mt-1 text-sm text-white/50">

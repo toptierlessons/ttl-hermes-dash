@@ -184,9 +184,11 @@ export default function KanbanPage() {
   return (
     <div className="flex h-full flex-col">
       {/* Toolbar */}
-      <div className="border-b border-white/10 p-4">
-        <div className="mb-3 flex items-center justify-between">
-          <h1 className="text-2xl font-semibold tracking-tight">Kanban</h1>
+      <div className="border-b border-white/10 p-3 sm:p-4">
+        <div className="mb-3 flex flex-wrap items-center justify-between gap-3">
+          <h1 className="text-xl font-semibold tracking-tight sm:text-2xl">
+            Kanban
+          </h1>
           <div className="flex items-center gap-2">
             <button
               onClick={() => void action(() => api.nudgeKanbanDispatcher())}
@@ -208,7 +210,7 @@ export default function KanbanPage() {
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             placeholder="Filter cards…"
-            className="w-56 rounded-lg border border-white/15 bg-white/5 px-3 py-1.5 text-sm text-white placeholder:text-white/35 focus:outline-none"
+            className="w-full rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm text-white placeholder:text-white/35 focus:outline-none sm:w-56"
           />
           <Select
             value={tenant}
@@ -242,7 +244,7 @@ export default function KanbanPage() {
       )}
 
       {/* Board */}
-      <div className="min-h-0 flex-1 overflow-auto p-4">
+      <div className="min-h-0 flex-1 overflow-auto p-3 sm:p-4">
         {loading ? (
           <div className="flex items-center gap-2 text-sm text-white/40">
             <Loader2 className="h-4 w-4 animate-spin" /> Loading board…
@@ -281,7 +283,7 @@ export default function KanbanPage() {
       )}
 
       {addColumn && (
-        <CreateTaskModal
+        <CreateTaskPanel
           columnLabel={
             COLUMNS.find((c) => c.key === addColumn)?.label ?? addColumn
           }
@@ -345,7 +347,7 @@ function Column({
         if (id) onDropTask(id);
       }}
       className={[
-        "flex w-80 shrink-0 flex-col rounded-xl border bg-white/[0.02] p-3",
+        "flex w-full flex-col rounded-xl border bg-white/[0.02] p-3 sm:w-80 sm:shrink-0",
         over && dragId ? "border-sky-400/50 bg-sky-400/5" : "border-white/10",
       ].join(" ")}
     >
@@ -357,10 +359,11 @@ function Column({
         <span className="ml-auto text-xs text-white/40">{tasks.length}</span>
         <button
           onClick={onAdd}
-          title="Add task"
-          className="rounded border border-white/15 p-0.5 text-white/50 hover:bg-white/10 hover:text-white"
+          title={`Add task to ${col.label}`}
+          aria-label={`Add task to ${col.label}`}
+          className="tap-square grid size-7 shrink-0 place-items-center rounded-lg border border-white/15 text-white/60 hover:bg-white/10 hover:text-white"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-4 w-4" />
         </button>
       </div>
       <p className="mt-1 mb-3 text-xs text-white/35">{col.help}</p>
@@ -521,7 +524,7 @@ function Select({
   );
 }
 
-function CreateTaskModal({
+function CreateTaskPanel({
   columnLabel,
   profiles,
   busy,
@@ -547,11 +550,11 @@ function CreateTaskModal({
 
   return (
     <div
-      className="fixed inset-0 z-50 grid place-items-center bg-black/60 p-4"
+      className="fixed inset-0 z-50 flex justify-end bg-black/50"
       onClick={busy ? undefined : onClose}
     >
       <div
-        className="flex max-h-[85vh] w-full max-w-xl flex-col rounded-2xl border border-white/10 bg-[#15181d]"
+        className="flex h-full w-full max-w-md flex-col border-l border-white/10 bg-[#15181d]"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
