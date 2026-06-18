@@ -3,7 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import {
   Activity,
   MessageSquare,
-  Kanban,
+  // Kanban,
   Clock,
   BarChart3,
   Package,
@@ -24,7 +24,7 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: "/chat", label: "Chat", icon: MessageSquare },
   { to: "/scheduled", label: "Scheduled", icon: Clock },
-  { to: "/kanban", label: "Kanban", icon: Kanban },
+  // { to: "/kanban", label: "Kanban", icon: Kanban },
   { to: "/skills", label: "Skills", icon: Package },
   { to: "/usage", label: "Usage", icon: BarChart3 },
   { to: "/health", label: "Health", icon: Activity },
