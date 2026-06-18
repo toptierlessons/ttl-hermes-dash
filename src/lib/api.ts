@@ -41,8 +41,17 @@ function setSessionHeader(headers: Headers, token: string): void {
 
 interface FetchJSONOptions {
   /** When true, a 401 is surfaced as a thrown error rather than triggering
-   *  the loopback stale-token page reload. */
+   *  the loopback stale-token page reload or the gated re-auth handler. */
   allowUnauthorized?: boolean;
+}
+
+// In gated mode, a 401 with an "unauthenticated"/"session_expired" envelope
+// means the cookie is missing/expired. Instead of redirecting to /login (the
+// stock dashboard's behavior), we notify the in-app AuthGate so it can show
+// the credential form without navigating away.
+let unauthenticatedHandler: (() => void) | null = null;
+export function setUnauthenticatedHandler(fn: (() => void) | null): void {
+  unauthenticatedHandler = fn;
 }
 
 export async function fetchJSON<T>(
@@ -67,12 +76,11 @@ export async function fetchJSON<T>(
     } catch {
       /* non-JSON 401 — let it fall through */
     }
-    if (
-      (body.error === "unauthenticated" || body.error === "session_expired") &&
-      body.login_url
-    ) {
-      window.location.assign(body.login_url);
-      return new Promise<T>(() => {});
+    if (body.error === "unauthenticated" || body.error === "session_expired") {
+      // Gated mode, missing/expired cookie. Surface to the AuthGate (which
+      // shows the login form in place) rather than redirecting. The error
+      // still throws below so the calling code stops.
+      if (!options?.allowUnauthorized) unauthenticatedHandler?.();
     }
     // Loopback mode: the session token rotates on every server restart. A tab
     // kept open across a restart holds the OLD token, so every fetch 401s.
@@ -525,6 +533,52 @@ export interface ModelsAnalyticsResponse {
 
 export const api = {
   getStatus: () => fetchJSON<StatusResponse>("/api/status"),
+
+  // --- Gated-mode auth ---
+  /** Identity probe. 200 when a valid session cookie is present, else 401.
+   * `allowUnauthorized` keeps the 401 a plain throw (no re-auth handler). */
+  getAuthMe: () =>
+    fetchJSON<{ provider?: string; user_id?: string }>(
+      "/api/auth/me",
+      undefined,
+      {
+        allowUnauthorized: true,
+      },
+    ),
+  /** Credential login. POSTs to the gate's password endpoint, which sets the
+   * `hermes_session_at` cookie (no redirect needed — fetch follows the
+   * server-side redirect internally and the browser stores the cookie). */
+  passwordLogin: async (
+    provider: string,
+    username: string,
+    password: string,
+  ): Promise<void> => {
+    const res = await fetch(`${BASE}/auth/password-login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ provider, username, password }),
+      credentials: "include",
+    });
+    if (!res.ok) {
+      let msg = `Login failed (HTTP ${res.status})`;
+      try {
+        const b = await res.json();
+        msg =
+          (typeof b.detail === "string" && b.detail) ||
+          b.error ||
+          (res.status === 401 ? "Invalid username or password" : msg);
+      } catch {
+        if (res.status === 401) msg = "Invalid username or password";
+      }
+      throw new Error(msg);
+    }
+  },
+  logout: async (): Promise<void> => {
+    await fetch(`${BASE}/auth/logout`, {
+      method: "POST",
+      credentials: "include",
+    }).catch(() => {});
+  },
   getSessions: (limit = 20, offset = 0) =>
     fetchJSON<PaginatedSessions>(
       `/api/sessions?limit=${limit}&offset=${offset}`,

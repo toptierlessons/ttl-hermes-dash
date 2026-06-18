@@ -6,7 +6,9 @@ import {
   Clock,
   BarChart3,
   Package,
+  LogOut,
 } from "lucide-react";
+import { api } from "@/lib/api";
 import logoUrl from "../assets/logo.svg";
 
 interface NavItem {
@@ -65,6 +67,18 @@ export default function App() {
             ),
           )}
         </nav>
+        {window.__HERMES_AUTH_REQUIRED__ && (
+          <button
+            onClick={async () => {
+              await api.logout();
+              window.location.reload();
+            }}
+            className="mt-auto flex items-center gap-3 rounded-lg px-3 py-2 text-sm text-white/55 hover:bg-white/5 hover:text-white"
+          >
+            <LogOut className="h-4 w-4" />
+            Sign out
+          </button>
+        )}
       </aside>
       <main className="min-w-0 flex-1 overflow-auto">
         <Outlet />

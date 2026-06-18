@@ -69,6 +69,15 @@ export default defineConfig({
         target: BACKEND,
         ws: true,
         changeOrigin: true,
+        // Rewrite the gated-mode session cookie (hermes_session_at) to the dev
+        // origin so the browser stores and resends it through the proxy.
+        cookieDomainRewrite: "",
+      },
+      // Gated-mode auth endpoints live outside /api.
+      "/auth": {
+        target: BACKEND,
+        changeOrigin: true,
+        cookieDomainRewrite: "",
       },
     },
   },

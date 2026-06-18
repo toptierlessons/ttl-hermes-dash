@@ -165,12 +165,6 @@ export default function HealthPage() {
 
         <SystemPane stats={system} update={update} />
       </div>
-
-      <p className="mt-6 text-xs text-white/40">
-        Serving origin: <code className="text-white/60">{location.origin}</code>{" "}
-        — <code>/api</code> is proxied to the Hermes backend
-        (HERMES_DASHBOARD_URL, default <code>http://127.0.0.1:9119</code>).
-      </p>
     </div>
   );
 }
