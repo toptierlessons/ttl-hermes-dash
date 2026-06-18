@@ -330,6 +330,110 @@ export interface Skill {
   enabled: boolean;
 }
 
+export interface Toolset {
+  name: string;
+  label: string;
+  description: string;
+  enabled: boolean;
+  configured: boolean;
+  tools: string[];
+}
+
+// --- Kanban (the bundled multi-agent board plugin, /api/plugins/kanban) ---
+export interface KanbanTask {
+  id: string;
+  title: string;
+  body?: string | null;
+  assignee?: string | null;
+  /** The column the card lives in (move = PATCH { status }). */
+  status: string;
+  priority?: number;
+  tenant?: string | null;
+  workspace_kind?: string | null;
+  created_by?: string | null;
+  created_at?: number;
+  started_at?: number | null;
+  completed_at?: number | null;
+  skills?: string[] | null;
+  session_id?: string | null;
+  comment_count?: number;
+  link_counts?: { parents: number; children: number };
+  /** Checklist/step progress, when present (shape varies). */
+  progress?: Record<string, number> | null;
+  age?: { created_age_seconds?: number | null };
+  latest_summary?: string | null;
+  last_failure_error?: string | null;
+  consecutive_failures?: number;
+}
+
+export interface KanbanColumn {
+  name: string;
+  tasks: KanbanTask[];
+}
+
+export interface KanbanBoard {
+  columns: KanbanColumn[];
+  tenants: string[];
+  assignees: string[];
+  latest_event_id: number;
+  now: number;
+}
+
+export interface KanbanComment {
+  id: number;
+  author: string;
+  body: string;
+  created_at: number;
+}
+
+export interface KanbanEvent {
+  id: number;
+  kind: string;
+  payload?: unknown;
+  created_at: number;
+  run_id?: string | null;
+}
+
+export interface KanbanLinkItem {
+  id: string;
+  title?: string;
+  status?: string;
+}
+
+export interface KanbanAttachment {
+  id: string | number;
+  name?: string;
+  filename?: string;
+}
+
+export interface KanbanRun {
+  id: number | string;
+  outcome?: string | null;
+  status?: string | null;
+  profile?: string | null;
+  started_at?: number | null;
+  ended_at?: number | null;
+  summary?: string | null;
+  error?: string | null;
+  metadata?: Record<string, unknown> | null;
+}
+
+export interface KanbanTaskDetail {
+  task: KanbanTask;
+  comments: KanbanComment[];
+  events: KanbanEvent[];
+  attachments: KanbanAttachment[];
+  links: { parents: KanbanLinkItem[]; children: KanbanLinkItem[] };
+  runs: KanbanRun[];
+}
+
+export interface KanbanProfile {
+  name: string;
+  is_default?: boolean;
+  model?: string | null;
+  description?: string | null;
+}
+
 export interface AnalyticsDailyEntry {
   day: string;
   input_tokens: number;
@@ -453,6 +557,127 @@ export const api = {
   getModelsAnalytics: (days = 30) =>
     fetchJSON<ModelsAnalyticsResponse>(`/api/analytics/models?days=${days}`),
   getSkills: () => fetchJSON<Skill[]>("/api/skills"),
+  toggleSkill: (name: string, enabled: boolean) =>
+    fetchJSON<{ ok: boolean }>("/api/skills/toggle", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ name, enabled }),
+    }),
+  /** Author a custom skill (YAML frontmatter + markdown). */
+  createSkill: (body: { name: string; content: string; category?: string }) =>
+    fetchJSON<{ success: boolean; message?: string }>("/api/skills", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  getToolsets: () => fetchJSON<Toolset[]>("/api/tools/toolsets"),
+  toggleToolset: (name: string, enabled: boolean) =>
+    fetchJSON<{ ok: boolean; name: string; enabled: boolean }>(
+      `/api/tools/toolsets/${encodeURIComponent(name)}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ enabled }),
+      },
+    ),
+
+  // --- Kanban board ---
+  getKanbanBoard: () => fetchJSON<KanbanBoard>("/api/plugins/kanban/board"),
+  createKanbanTask: (body: {
+    title: string;
+    status?: string;
+    assignee?: string;
+    tenant?: string;
+    priority?: number;
+    body?: string;
+  }) =>
+    fetchJSON<{ task: KanbanTask }>("/api/plugins/kanban/tasks", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }),
+  /** Move a card (or any field update). Move = `{ status: "<column>" }`. */
+  updateKanbanTask: (
+    id: string,
+    patch: Partial<{
+      status: string;
+      priority: number;
+      title: string;
+      body: string;
+      tenant: string | null;
+    }>,
+  ) =>
+    fetchJSON<{ task: KanbanTask }>(
+      `/api/plugins/kanban/tasks/${encodeURIComponent(id)}`,
+      {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(patch),
+      },
+    ),
+  getKanbanTask: (id: string) =>
+    fetchJSON<KanbanTaskDetail>(
+      `/api/plugins/kanban/tasks/${encodeURIComponent(id)}`,
+    ),
+  /** Live worker transcript/log for a task's current (or last) run. */
+  getKanbanTaskLog: (id: string) =>
+    fetchJSON<{
+      content: string;
+      size_bytes: number;
+      exists: boolean;
+      truncated: boolean;
+    }>(`/api/plugins/kanban/tasks/${encodeURIComponent(id)}/log`),
+  getKanbanProfiles: () =>
+    fetchJSON<{ profiles: KanbanProfile[] }>("/api/plugins/kanban/profiles"),
+  /** Assign (or unassign with null) a profile to a task. `reclaimFirst`
+   * releases an active claim before reassigning — used to retry a failed task. */
+  reassignKanbanTask: (
+    id: string,
+    profile: string | null,
+    reclaimFirst = false,
+  ) =>
+    fetchJSON<unknown>(
+      `/api/plugins/kanban/tasks/${encodeURIComponent(id)}/reassign`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ profile, reclaim_first: reclaimFirst }),
+      },
+    ),
+  addKanbanComment: (id: string, body: string) =>
+    fetchJSON<unknown>(
+      `/api/plugins/kanban/tasks/${encodeURIComponent(id)}/comments`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ body }),
+      },
+    ),
+  addKanbanLink: (parentId: string, childId: string) =>
+    fetchJSON<unknown>("/api/plugins/kanban/links", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ parent_id: parentId, child_id: childId }),
+    }),
+  uploadKanbanAttachment: async (id: string, file: File): Promise<void> => {
+    const fd = new FormData();
+    fd.append("file", file);
+    const res = await authedFetch(
+      `/api/plugins/kanban/tasks/${encodeURIComponent(id)}/attachments`,
+      { method: "POST", body: fd },
+    );
+    if (!res.ok) throw new Error(`Upload failed: HTTP ${res.status}`);
+  },
+  deleteKanbanTask: async (id: string): Promise<void> => {
+    const res = await authedFetch(
+      `/api/plugins/kanban/tasks/${encodeURIComponent(id)}`,
+      { method: "DELETE" },
+    );
+    if (!res.ok) throw new Error(`Delete failed: HTTP ${res.status}`);
+  },
+  /** Nudge the dispatcher to claim/advance ready tasks. */
+  nudgeKanbanDispatcher: () =>
+    fetchJSON<unknown>("/api/plugins/kanban/dispatch", { method: "POST" }),
 
   // --- Profiles ---
   getProfiles: () => fetchJSON<{ profiles: ProfileInfo[] }>("/api/profiles"),

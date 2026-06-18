@@ -5,7 +5,9 @@ import {
   Kanban,
   Clock,
   BarChart3,
+  Package,
 } from "lucide-react";
+import logoUrl from "../assets/logo.svg";
 
 interface NavItem {
   to: string;
@@ -17,17 +19,18 @@ interface NavItem {
 const NAV: NavItem[] = [
   { to: "/chat", label: "Chat", icon: MessageSquare },
   { to: "/scheduled", label: "Scheduled", icon: Clock },
+  { to: "/kanban", label: "Kanban", icon: Kanban },
+  { to: "/skills", label: "Skills", icon: Package },
   { to: "/usage", label: "Usage", icon: BarChart3 },
   { to: "/health", label: "Health", icon: Activity },
-  { to: "/board", label: "Board", icon: Kanban, disabled: true },
 ];
 
 export default function App() {
   return (
     <div className="flex h-dvh">
       <aside className="flex w-56 flex-col gap-1 border-r border-white/10 bg-black/30 p-3">
-        <div className="px-2 py-3 text-lg font-semibold tracking-tight">
-          Hermes
+        <div className="mb-4 px-3 py-3">
+          <img src={logoUrl} alt="Hermes" className="h-9 w-auto" />
         </div>
         <nav className="flex flex-col gap-1">
           {NAV.map(({ to, label, icon: Icon, disabled }) =>

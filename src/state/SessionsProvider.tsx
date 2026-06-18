@@ -784,9 +784,15 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
   const deleteSession = useCallback(async (sessionId: string) => {
     const s = sessionsRef.current.find((x) => x.id === sessionId);
     const storedId = s?.storedId;
-    // Only stored sessions exist on the server; a never-saved one is local-only.
+    // A brand-new chat that never received a message isn't persisted on the
+    // server yet, so its DELETE 404s — that's fine, just drop it locally.
+    // Re-throw other failures so genuine errors still surface.
     if (storedId) {
-      await api.deleteSession(storedId);
+      try {
+        await api.deleteSession(storedId);
+      } catch (e) {
+        if (!(e instanceof Error && /\b404\b/.test(e.message))) throw e;
+      }
     }
     setSessions((prev) => prev.filter((x) => x.id !== sessionId));
     setActiveId((cur) => (cur === sessionId ? null : cur));

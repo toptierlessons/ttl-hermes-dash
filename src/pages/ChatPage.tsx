@@ -19,11 +19,18 @@ import Composer from "@/components/Composer";
 import OptionPrompt from "@/components/OptionPrompt";
 
 const CHAT_GROUP = "Chat Sessions";
+const KANBAN_GROUP = "Kanban";
 // Origins that are direct chat surfaces (vs. gateway platforms like Slack).
 const CHAT_SOURCES = new Set(["cli", "tui", "web", "api"]);
+// Kanban worker runs surface with a generic `cli` source but always title
+// their session "work kanban task t_…", so we classify them by that prefix.
+const KANBAN_TITLE_PREFIX = "work kanban task";
 
-/** Rail group a session belongs to, by origin. */
-function groupLabel(source?: string): string {
+/** Rail group a session belongs to, by Kanban-title prefix then origin. */
+function groupLabel(s: ChatSession): string {
+  if ((s.title || "").toLowerCase().startsWith(KANBAN_TITLE_PREFIX))
+    return KANBAN_GROUP;
+  const source = s.source;
   if (!source || CHAT_SOURCES.has(source)) return CHAT_GROUP;
   return source.charAt(0).toUpperCase() + source.slice(1);
 }
@@ -79,7 +86,7 @@ export default function ChatPage() {
   // find: local chat (cli/tui/web/api) vs each gateway platform (Slack, …).
   const groups = new Map<string, ChatSession[]>();
   for (const s of ordered) {
-    const g = groupLabel(s.source);
+    const g = groupLabel(s);
     (groups.get(g) ?? groups.set(g, []).get(g)!).push(s);
   }
   const groupNames = [...groups.keys()].sort((a, b) =>
@@ -174,14 +181,14 @@ export default function ChatPage() {
         <button
           onClick={() => void createSession()}
           disabled={connection !== "open"}
-          className="mx-3 mb-2 flex items-center justify-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2 text-sm hover:bg-white/10 disabled:opacity-40"
+          className="mx-3 mb-2 flex items-center justify-center gap-2 rounded-lg bg-sky-500 px-3 py-2 text-sm font-medium text-white hover:bg-sky-400 disabled:opacity-40"
         >
           <Plus className="h-4 w-4" /> New chat
         </button>
 
         {/* Search across all stored sessions */}
-        <div className="mx-3 mb-2 px-3">
-          <div className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-2.5 py-1.5">
+        <div className="mx-3 mb-2">
+          <div className="flex items-center gap-2 rounded-lg border border-white/15 bg-white/5 px-3 py-2">
             <Search className="h-3.5 w-3.5 shrink-0 text-white/40" />
             <input
               value={query}
@@ -217,15 +224,15 @@ export default function ChatPage() {
                   <div key={name} className="mb-1">
                     <button
                       onClick={() => toggleGroup(name)}
-                      className="flex w-full items-center gap-1.5 px-2 py-1.5 text-xs font-medium tracking-wide text-white/40 hover:text-white/70"
+                      className="flex w-full items-center gap-1.5 px-2 py-1.5 text-sm font-semibold tracking-wide text-white/80 hover:text-white"
                     >
                       {isCollapsed ? (
-                        <ChevronRight className="h-3.5 w-3.5" />
+                        <ChevronRight className="h-4 w-4" />
                       ) : (
-                        <ChevronDown className="h-3.5 w-3.5" />
+                        <ChevronDown className="h-4 w-4" />
                       )}
                       <span className="uppercase">{name}</span>
-                      <span className="ml-auto rounded bg-white/5 px-1.5 text-white/35">
+                      <span className="ml-auto rounded bg-white/10 px-1.5 text-xs font-medium text-white/55">
                         {items.length}
                       </span>
                     </button>

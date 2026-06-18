@@ -4,6 +4,17 @@
   color-scheme: dark;
 }
 
+/* Interactive elements get a pointer cursor by default (Tailwind's reset and
+   the browser leave <button> as the default arrow). Disabled controls keep
+   the default/not-allowed cursor. */
+button:not(:disabled),
+[role="button"]:not([aria-disabled="true"]),
+summary,
+label:has(> input[type="checkbox"]),
+select:not(:disabled) {
+  cursor: pointer;
+}
+
 html,
 body,
 #root {
