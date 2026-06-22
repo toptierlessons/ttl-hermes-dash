@@ -8,6 +8,7 @@ import {
   Loader2,
   Check,
   TriangleAlert,
+  HelpCircle,
 } from "lucide-react";
 import { Terminal } from "lucide-react";
 import type {
@@ -34,7 +35,9 @@ export default function MessageList({
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-col gap-5 px-4 py-6">
       {messages.map((m) =>
-        m.kind === "tool" ? (
+        m.kind === "tool" && m.name === "clarify" ? (
+          <ClarifyCard key={m.id} tool={m} />
+        ) : m.kind === "tool" ? (
           <ToolCard key={m.id} tool={m} />
         ) : m.kind === "system" ? (
           <SystemCard key={m.id} note={m} />
@@ -88,13 +91,13 @@ function ToolCard({ tool }: { tool: ToolItem }) {
   return (
     <div
       data-testid="tool-card"
-      className="rounded-lg border border-white/10 bg-white/[0.03]"
+      className="rounded-lg border border-white/10 bg-white/3"
     >
       <button
         onClick={() => expandable && setOpen((v) => !v)}
         className={[
           "flex w-full items-center gap-2 px-3 py-2 text-left text-sm",
-          expandable ? "hover:bg-white/[0.04]" : "cursor-default",
+          expandable ? "hover:bg-white/4" : "cursor-default",
         ].join(" ")}
       >
         <Wrench className="h-3.5 w-3.5 shrink-0 text-white/40" />
@@ -130,9 +133,34 @@ function ToolCard({ tool }: { tool: ToolItem }) {
   );
 }
 
+/** A clarify the agent asked earlier, shown when a session is resumed from
+ * history (live clarifies render as the interactive picker instead). The
+ * tool's `context` is the question; its `result` is the answer that was
+ * given, if any. */
+function ClarifyCard({ tool }: { tool: ToolItem }) {
+  return (
+    <div className="rounded-xl border border-amber-400/20 bg-amber-400/4 px-4 py-3">
+      <div className="flex items-center gap-1.5 text-xs font-medium text-amber-200/80">
+        <HelpCircle className="h-3.5 w-3.5" />
+        Asked you to choose
+      </div>
+      {tool.context && (
+        <p className="mt-1.5 text-sm leading-snug text-white/80">
+          {tool.context}
+        </p>
+      )}
+      {tool.result && (
+        <p className="mt-2 text-xs text-white/45">
+          Answered: <span className="text-white/70">{tool.result}</span>
+        </p>
+      )}
+    </div>
+  );
+}
+
 function SystemCard({ note }: { note: SystemNote }) {
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02]">
+    <div className="rounded-lg border border-white/10 bg-white/2">
       <div className="flex items-center gap-2 border-b border-white/10 px-3 py-1.5 text-xs text-white/55">
         <Terminal className="h-3.5 w-3.5" />
         <span className="font-mono">{note.command}</span>
@@ -157,7 +185,7 @@ function ToolStatus({ status }: { status: ToolItem["status"] }) {
 function Reasoning({ text }: { text: string }) {
   const [open, setOpen] = useState(false);
   return (
-    <div className="rounded-lg border border-white/10 bg-white/[0.02]">
+    <div className="rounded-lg border border-white/10 bg-white/2">
       <button
         onClick={() => setOpen((v) => !v)}
         className="flex w-full items-center gap-1.5 px-3 py-1.5 text-xs text-white/45 hover:text-white/70"

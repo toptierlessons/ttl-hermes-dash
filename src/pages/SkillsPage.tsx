@@ -333,7 +333,7 @@ function Row({
   onToggle: () => void;
 }) {
   return (
-    <div className="flex items-start gap-3 rounded-lg px-2 py-3 hover:bg-white/[0.02]">
+    <div className="flex items-start gap-3 rounded-lg px-2 py-3 hover:bg-white/2">
       <ToggleSwitch enabled={enabled} busy={busy} onToggle={onToggle} />
       <div className="min-w-0 flex-1">
         <div className="font-mono text-sm text-white/90">{name}</div>

@@ -21,7 +21,8 @@ import { api } from "@/lib/api";
 //                         -> { session_id:<NEW live id>, message_count,
 //                              messages:[{role, text, reasoning?}], running, info }
 //   prompt.submit         { session_id, text }
-//   clarify.respond       { session_id, request_id, choice }
+//   clarify.respond       { session_id, request_id, answer }  (answer -> the
+//                         clarify tool's user_response; `choice` is dropped)
 // Streaming events (all carry session_id = the LIVE id):
 //   message.start | message.delta {text} | message.complete {text, reasoning}
 //   reasoning.delta {text} | thinking.delta {text}
@@ -79,6 +80,45 @@ export interface ClarifyPrompt {
   choices: string[];
 }
 
+// A clarify is a LIVE-only event: the agent blocks on it, but `session.resume`
+// reports only `status:"waiting"` — it never replays the question/choices or
+// the request_id, and a plain `prompt.submit` while blocked is rejected
+// ("session busy"). Without the request_id the answer can't be sent, so a page
+// refresh would strand the chat forever. We persist the pending prompt per
+// stored-session id so a reload can restore the picker; the saved request_id
+// stays valid against the resumed session (verified against the live gateway).
+const CLARIFY_KEY = "hermes.clarify.";
+function saveClarify(storedId: string | undefined, p: ClarifyPrompt): void {
+  if (!storedId) return;
+  try {
+    sessionStorage.setItem(CLARIFY_KEY + storedId, JSON.stringify(p));
+  } catch {
+    /* storage unavailable (private mode) — refresh recovery just won't work */
+  }
+}
+function loadClarify(storedId: string | undefined): ClarifyPrompt | null {
+  if (!storedId) return null;
+  try {
+    const raw = sessionStorage.getItem(CLARIFY_KEY + storedId);
+    if (!raw) return null;
+    const p = JSON.parse(raw) as ClarifyPrompt;
+    if (p && typeof p.request_id === "string" && Array.isArray(p.choices)) {
+      return p;
+    }
+  } catch {
+    /* malformed — ignore */
+  }
+  return null;
+}
+function clearClarify(storedId: string | undefined): void {
+  if (!storedId) return;
+  try {
+    sessionStorage.removeItem(CLARIFY_KEY + storedId);
+  } catch {
+    /* ignore */
+  }
+}
+
 export interface ChatSession {
   /** The id used for gateway RPCs. For an opened session this is the live
    * gateway id; for an unopened history entry it's the stored id (until
@@ -103,6 +143,11 @@ export interface ChatSession {
   /** Transient label of what the agent is doing (thinking text / tool name). */
   activity?: string;
   clarify?: ClarifyPrompt | null;
+  /** Set when a resumed session is `status:"waiting"` on a clarify whose
+   * request_id we no longer have (reloaded in a different browser, or storage
+   * was cleared). The picker can't be restored, so we surface a notice with a
+   * Stop action rather than leaving the chat silently stuck. */
+  clarifyLost?: boolean;
   error?: string | null;
   createdAt: number;
   lastActive: number;
@@ -347,7 +392,15 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
               activity: p.name ? `Preparing ${String(p.name)}…` : "Working…",
             }));
             break;
-          case "tool.start":
+          case "tool.start": {
+            const toolName = typeof p.name === "string" ? p.name : "tool";
+            // The clarify tool surfaces as the interactive picker below
+            // (clarify.request fires right after) — don't also push a generic
+            // tool card for it.
+            if (toolName === "clarify") {
+              patch(sid, (s) => ({ ...s, status: "busy" }));
+              break;
+            }
             patch(sid, (s) => {
               const msgs = [...s.messages];
               // Close any streaming assistant bubble so the tool card renders
@@ -382,6 +435,7 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
               };
             });
             break;
+          }
           case "tool.complete":
             patch(sid, (s) => {
               const msgs = [...s.messages];
@@ -415,7 +469,19 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
               return { ...s, messages: msgs };
             });
             break;
-          case "clarify.request":
+          case "clarify.request": {
+            const clarify: ClarifyPrompt = {
+              request_id: String(p.request_id ?? ""),
+              question: String(p.question ?? ""),
+              choices: Array.isArray(p.choices)
+                ? (p.choices as unknown[]).map(String)
+                : [],
+            };
+            // Persist so a reload can restore the picker (see saveClarify).
+            saveClarify(
+              sessionsRef.current.find((x) => x.id === sid)?.storedId,
+              clarify,
+            );
             patch(sid, (s) => {
               // The agent pauses here awaiting the answer. Close out any
               // in-flight assistant bubble so the picker reads cleanly; drop
@@ -438,16 +504,12 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
                 ...s,
                 messages: msgs,
                 activity: undefined,
-                clarify: {
-                  request_id: String(p.request_id ?? ""),
-                  question: String(p.question ?? ""),
-                  choices: Array.isArray(p.choices)
-                    ? (p.choices as unknown[]).map(String)
-                    : [],
-                },
+                clarifyLost: false,
+                clarify,
               };
             });
             break;
+          }
           case "session.info":
             patch(sid, (s) => ({
               ...s,
@@ -600,10 +662,19 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
           session_id: string;
           messages?: unknown;
           running?: boolean;
+          // "waiting" when the agent is blocked on a clarify it asked before
+          // this resume — the question itself isn't in the payload.
+          status?: string;
           info?: { model?: string };
         }>("session.resume", { session_id: storedId });
         const liveId = r.session_id;
         const msgs = mapResumeMessages(r.messages);
+        // If the session is parked on a clarify, restore the picker from the
+        // copy we saved when it first fired. If we don't have it (other
+        // browser / cleared storage), flag it so the UI offers a way out.
+        const restoredClarify =
+          r.status === "waiting" ? loadClarify(storedId) : null;
+        const clarifyLost = r.status === "waiting" && !restoredClarify;
         const firstUser = msgs.find(
           (m) => m.kind === "message" && m.role === "user",
         ) as ChatMessage | undefined;
@@ -624,6 +695,9 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
                   messages: msgs,
                   model: r.info?.model ?? x.model,
                   status: r.running === true ? "busy" : "idle",
+                  activity: undefined,
+                  clarify: restoredClarify,
+                  clarifyLost,
                   title:
                     isPlaceholder(x.title) && firstUserText
                       ? firstUserText.slice(0, 40)
@@ -689,7 +763,16 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
       } catch {
         /* best effort — message.complete (if any) still finalizes below */
       }
-      patch(sessionId, (s) => ({ ...s, status: "idle", activity: undefined }));
+      clearClarify(
+        sessionsRef.current.find((x) => x.id === sessionId)?.storedId,
+      );
+      patch(sessionId, (s) => ({
+        ...s,
+        status: "idle",
+        activity: undefined,
+        clarify: null,
+        clarifyLost: false,
+      }));
     },
     [gw, patch],
   );
@@ -739,10 +822,14 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
 
   const respondClarify = useCallback(
     async (sessionId: string, requestId: string, choice: string) => {
+      clearClarify(
+        sessionsRef.current.find((x) => x.id === sessionId)?.storedId,
+      );
       // Optimistically clear the prompt and record the choice as a user turn.
       patch(sessionId, (s) => ({
         ...s,
         clarify: null,
+        clarifyLost: false,
         status: "busy",
         active: true,
         activity: "Thinking…",
@@ -755,7 +842,11 @@ export function SessionsProvider({ children }: { children: React.ReactNode }) {
         await gw.request("clarify.respond", {
           session_id: sessionId,
           request_id: requestId,
-          choice,
+          // MUST be `answer` — the gateway maps this to the clarify tool's
+          // `user_response`. A `choice` field is silently accepted (returns
+          // status:"ok") but delivers an EMPTY response, so the agent thinks
+          // you never replied. Verified against the live gateway.
+          answer: choice,
         });
       } catch (e) {
         patch(sessionId, (s) => ({

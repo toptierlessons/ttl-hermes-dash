@@ -347,7 +347,7 @@ function Column({
         if (id) onDropTask(id);
       }}
       className={[
-        "flex w-full flex-col rounded-xl border bg-white/[0.02] p-3 sm:w-80 sm:shrink-0",
+        "flex w-full flex-col rounded-xl border bg-white/2 p-3 sm:w-80 sm:shrink-0",
         over && dragId ? "border-sky-400/50 bg-sky-400/5" : "border-white/10",
       ].join(" ")}
     >
@@ -431,7 +431,7 @@ function Card({
         onDragStart(task.id);
       }}
       onDragEnd={onDragEnd}
-      className="group cursor-pointer rounded-lg border border-white/10 bg-white/[0.04] p-3 hover:border-white/20"
+      className="group cursor-pointer rounded-lg border border-white/10 bg-white/4 p-3 hover:border-white/20"
     >
       <div className="flex items-center gap-1.5">
         <span className="font-mono text-xs text-white/55">

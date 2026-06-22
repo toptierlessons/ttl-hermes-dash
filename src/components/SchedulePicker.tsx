@@ -143,7 +143,7 @@ export default function SchedulePicker({
       )}
 
       {preview ? (
-        <div className="rounded-lg bg-white/[0.03] px-3 py-2 text-xs">
+        <div className="rounded-lg bg-white/3 px-3 py-2 text-xs">
           <div className="text-white/70">{preview.summary}</div>
           <div className="mt-0.5 text-white/35">
             Stored as <code className="text-white/55">{preview.stored}</code>{" "}

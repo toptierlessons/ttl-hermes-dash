@@ -307,10 +307,7 @@ export default function KanbanTaskDrawer({
               ) : (
                 <div className="space-y-2">
                   {detail.comments.map((c) => (
-                    <div
-                      key={c.id}
-                      className="rounded-lg bg-white/[0.03] px-3 py-2"
-                    >
+                    <div key={c.id} className="rounded-lg bg-white/3 px-3 py-2">
                       <div className="mb-0.5 flex items-center gap-2 text-xs text-white/40">
                         <span>{c.author}</span>
                         <span>·</span>
@@ -415,7 +412,7 @@ function DiagnosticsPanel({
   }
 
   return (
-    <div className="rounded-xl border-l-2 border-red-400/60 bg-red-500/[0.07] p-4">
+    <div className="rounded-xl border-l-2 border-red-400/60 bg-red-500/7 p-4">
       <div className="mb-2 flex items-center justify-between">
         <div className="flex items-center gap-2 text-amber-300">
           <TriangleAlert className="h-4 w-4" />
@@ -497,7 +494,7 @@ function DiagRow({
     <div className="flex gap-2">
       <dt className="shrink-0 text-white/45">{label}:</dt>
       <dd
-        className={`min-w-0 break-words text-white/80 ${mono ? "font-mono" : ""}`}
+        className={`min-w-0 wrap-break-word text-white/80 ${mono ? "font-mono" : ""}`}
       >
         {value}
       </dd>
@@ -614,7 +611,7 @@ function RunHistory({ runs }: { runs: KanbanRun[] }) {
           return (
             <div
               key={r.id}
-              className={`rounded-lg border border-l-2 border-white/10 bg-white/[0.03] p-3 ${runAccent(r.outcome, active)}`}
+              className={`rounded-lg border border-l-2 border-white/10 bg-white/3 p-3 ${runAccent(r.outcome, active)}`}
             >
               <div className="flex items-center gap-2 text-sm">
                 <span className="font-semibold text-white/85">{outcome}</span>

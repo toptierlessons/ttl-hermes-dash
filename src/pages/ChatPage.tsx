@@ -11,6 +11,7 @@ import {
   ChevronDown,
   ChevronRight,
   ChevronLeft,
+  Square,
 } from "lucide-react";
 import { useSessions, type ChatSession } from "@/state/SessionsProvider";
 import { api, type SessionSearchResult, type Skill } from "@/lib/api";
@@ -335,7 +336,7 @@ export default function ChatPage() {
                 />
               )}
 
-              {(active.clarify || active.error) && (
+              {(active.clarify || active.clarifyLost || active.error) && (
                 <div className="mx-auto w-full max-w-3xl px-4 pb-6">
                   {active.error && (
                     <div className="mb-3 flex items-start gap-2 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-200">
@@ -355,13 +356,37 @@ export default function ChatPage() {
                       }
                     />
                   )}
+                  {active.clarifyLost && !active.clarify && (
+                    <div className="flex items-start gap-3 rounded-xl border border-amber-400/30 bg-amber-400/6 px-4 py-3 text-sm text-amber-100">
+                      <AlertCircle className="mt-0.5 h-4 w-4 shrink-0 text-amber-300" />
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium">
+                          This chat is waiting on a question.
+                        </p>
+                        <p className="mt-0.5 text-amber-100/70">
+                          The agent asked you to choose something, but the
+                          options were lost when the page reloaded. Stop the
+                          current turn to continue the conversation.
+                        </p>
+                        <button
+                          onClick={() => void stopSession(active.id)}
+                          className="mt-2 inline-flex min-h-9 items-center gap-1.5 rounded-lg border border-amber-300/40 px-3 py-1.5 text-xs font-medium text-amber-100 hover:bg-amber-300/10"
+                        >
+                          <Square className="h-3 w-3 fill-current" /> Stop &
+                          continue
+                        </button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
 
             <Composer
               busy={active.status === "busy"}
-              blocked={!!active.clarify || active.loading}
+              blocked={
+                !!active.clarify || !!active.clarifyLost || active.loading
+              }
               skills={skills}
               onSend={(text) => void sendPrompt(active.id, text)}
               onCommand={(cmd) => void runCommand(active.id, cmd)}
